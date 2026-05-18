@@ -1,7 +1,7 @@
 <div align="center">
   <img src="guider.svg" alt="YOUCAT Vibe" width="120" />
   <h1>YOUCAT Vibe</h1>
-  <p><em>Youth Catechism · AI Ethics Guide · 青年教理 AI 伦理向导</em></p>
+  <p><em>Youth Catechism · AI Ethics Guide · 给年轻人的天主教宗教学 AI 向导</em></p>
 
   <p>
     <img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python">
