@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YOUCAT Vibe — 青年教理 AI 伦理向导</title>
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root {
+    --yellow: #FDC614;
+    --yellow-light: #FFE899;
+    --yellow-pale: #FFF8DC;
+    --black: #1a1a1a;
+    --gray: #666;
+    --gray-light: #999;
+    --white: #fff;
+    --radius: 14px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.06);
+    /* 礼仪颜色 */
+    --lit-white: #f0f0f0;
+    --lit-green: #4a9;
+    --lit-red: #d44;
+    --lit-purple: #96b;
+    --lit-rose: #f9c;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: "Noto Serif SC", "Source Han Serif SC", Georgia, serif;
+    background: var(--white);
+    color: var(--black);
+    height: 100vh;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Top Bar ── */
+  .top-bar {
+    width: 100%; background: var(--yellow);
+    padding: 6px 16px; display: flex;
+    align-items: center; justify-content: space-between;
+    font-size: 12px; letter-spacing: 4px;
+    font-weight: 700; text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .top-bar .lang-switch {
+    font-size: 11px; letter-spacing: 1px;
+    background: rgba(0,0,0,0.08); border: 1.5px solid rgba(0,0,0,0.15);
+    color: var(--black); padding: 3px 12px;
+    border-radius: 14px; cursor: pointer;
+    font-family: inherit; font-weight: 600;
+    transition: all 0.2s;
+  }
+  .top-bar .lang-switch:hover { background: rgba(0,0,0,0.15); }
+
+  /* ── Two-Column Layout ── */
+  .app-layout {
+    display: flex;
+    height: calc(100vh - 37px);
+  }
+
+  /* ── Left Panel (40%) ── */
+  .left-panel {
+    width: 40%; min-width: 340px;
+    border-right: 1px solid #eee;
+    display: flex; flex-direction: column;
+    background: #fafafa;
+    overflow-y: auto;
+  }
+  .left-panel::-webkit-scrollbar { width: 4px; }
+  .left-panel::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+
+  .panel-section {
+    padding: 18px 20px;
+    border-bottom: 1px solid #eee;
+  }
+  .panel-section:last-child { border-bottom: none; }
+
+  .section-title {
+    font-size: 12px; text-transform: uppercase;
+    letter-spacing: 2px; color: var(--gray-light);
+    margin-bottom: 12px; font-weight: 700;
+  }
+
+  /* ── Search ── */
+  .search-wrap {
+    display: flex; gap: 8px;
+  }
+  .search-wrap input {
+    flex: 1; border: 2px solid #e0e0e0; border-radius: 24px;
+    padding: 10px 16px; font-size: 14px; outline: none;
+    font-family: inherit; background: var(--white);
+    transition: border-color 0.3s;
+  }
+  .search-wrap input:focus { border-color: var(--yellow); }
+  .search-wrap button {
+    width: 42px; height: 42px; border-radius: 50%;
+    border: none; background: var(--yellow);
+    font-size: 16px; cursor: pointer; flex-shrink: 0;
+    font-weight: 700; color: var(--black);
+  }
+  .search-results {
+    margin-top: 10px; max-height: 400px; min-height: 60px;
+    height: 240px; overflow-y: auto;
+    resize: vertical;
+    border: 1px dashed transparent;
+    transition: border-color 0.2s;
+  }
+  .search-results:hover { border-color: #e0e0e0; }
+  .search-results:active { border-color: var(--yellow); }
+  .search-card {
+    background: var(--white); border-radius: var(--radius);
+    padding: 12px 14px; margin-bottom: 8px;
+    cursor: pointer; border: 1.5px solid transparent;
+    transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  }
+  .search-card:hover { border-color: var(--yellow); box-shadow: var(--shadow); }
+  .search-card .sc-concept { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  .search-card .sc-def { font-size: 12px; color: var(--gray); line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .search-card .sc-cat {
+    font-size: 10px; color: var(--yellow); margin-top: 6px;
+    background: var(--yellow-pale); display: inline-block;
+    padding: 2px 8px; border-radius: 10px;
+  }
+
+  /* ── Calendar ── */
+  .cal-loading { font-size: 13px; color: var(--gray-light); text-align: center; padding: 16px; }
+
+  .cal-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .cal-nav button {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 1.5px solid #e0e0e0; background: var(--white);
+    font-size: 14px; cursor: pointer; color: var(--gray);
+    transition: all 0.2s; font-family: inherit;
+  }
+  .cal-nav button:hover { border-color: var(--yellow); color: var(--black); background: var(--yellow-pale); }
+  .cal-nav .cal-month-label {
+    font-size: 14px; font-weight: 700; color: var(--black);
+    letter-spacing: 1px;
+  }
+  .cal-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 3px; text-align: center;
+  }
+  .cal-grid .cal-day-header {
+    font-size: 10px; color: var(--gray-light);
+    padding: 4px 0; font-weight: 600; text-transform: uppercase;
+  }
+  .cal-grid .cal-day {
+    padding: 6px 2px; min-height: 38px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-size: 12px; border-radius: 8px;
+    cursor: pointer; position: relative;
+    transition: all 0.15s;
+    color: var(--black);
+  }
+  .cal-grid .cal-day:hover { background: var(--yellow-pale); }
+  .cal-grid .cal-day.empty { cursor: default; }
+  .cal-grid .cal-day.empty:hover { background: transparent; }
+  .cal-grid .cal-day.today {
+    background: var(--yellow); font-weight: 700;
+    border-radius: 50%; color: var(--black);
+  }
+  .cal-grid .cal-day .dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    margin-top: 1px;
+  }
+  .cal-day-detail {
+    margin-top: 10px; padding: 12px;
+    background: var(--white); border-radius: var(--radius);
+    font-size: 13px; line-height: 1.6;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    display: none;
+  }
+  .cal-day-detail.open { display: block; }
+  .cal-day-detail .dd-title { font-weight: 700; font-size: 14px; }
+  .cal-day-detail .dd-color {
+    display: inline-block; width: 10px; height: 10px;
+    border-radius: 50%; margin-right: 4px; vertical-align: middle;
+  }
+
+  /* ── Map ── */
+  .map-wrapper {
+    width: 100%;
+    border-radius: var(--radius); overflow: hidden;
+    background: #e8e8e8;
+  }
+  #map {
+    width: 100%; height: 100%;
+    z-index: 0;
+  }
+  .map-hint {
+    font-size: 11px; color: var(--gray-light);
+    margin-top: 6px; text-align: center;
+  }
+
+  /* ── Right Panel (60%) ── */
+  .right-panel {
+    width: 60%; display: flex; flex-direction: column;
+    background: var(--white);
+  }
+
+  /* ── Quote Card (now in right panel) ── */
+  .quote-card {
+    margin: 16px 24px 0;
+    background: var(--yellow-pale);
+    border-left: 4px solid var(--yellow);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 16px 20px; flex-shrink: 0;
+  }
+  .quote-card .quote-label {
+    font-size: 10px; text-transform: uppercase;
+    letter-spacing: 3px; color: var(--gray-light); margin-bottom: 4px;
+  }
+  .quote-card .quote-text {
+    font-size: 15px; line-height: 1.8; color: #3a3a3a; font-style: italic;
+  }
+  .quote-card .quote-source {
+    margin-top: 6px; font-size: 11px; color: var(--gray-light); text-align: right;
+  }
+
+  /* ── Chat ── */
+  .chat-container {
+    flex: 1; display: flex; flex-direction: column;
+    padding: 16px 24px 20px; overflow: hidden;
+    min-height: 0;
+  }
+  .messages {
+    flex: 1; display: flex; flex-direction: column;
+    gap: 16px; overflow-y: auto; padding: 8px 4px; min-height: 0;
+  }
+  .messages::-webkit-scrollbar { width: 4px; }
+  .messages::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 2px; }
+
+  .msg { display: flex; gap: 10px; animation: fadeUp 0.4s ease; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .msg.user { flex-direction: row-reverse; }
+  .msg.user .bubble { background: var(--black); color: var(--white); border-radius: 20px 4px 20px 20px; }
+  .msg.bot  .bubble { background: #f5f5f5; color: var(--black); border-radius: 4px 20px 20px 20px; }
+
+  .msg .avatar {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; overflow: hidden;
+  }
+  .msg .avatar svg { width: 100%; height: 100%; display: block; }
+  .msg .bubble {
+    max-width: 78%; padding: 12px 18px;
+    font-size: 14px; line-height: 1.7; word-break: break-word;
+  }
+
+  .typing { display: none; }
+  .typing.active { display: flex; }
+  .typing .dots span {
+    display: inline-block; width: 7px; height: 7px;
+    border-radius: 50%; background: #ccc;
+    animation: bounce 1.2s infinite;
+  }
+  .typing .dots span:nth-child(2) { animation-delay: .15s; }
+  .typing .dots span:nth-child(3) { animation-delay: .3s; }
+  @keyframes bounce {
+    0%,60%,100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+  }
+
+  .input-area {
+    display: flex; gap: 8px; padding: 6px;
+    background: #f9f9f9; border-radius: 26px;
+    border: 2px solid transparent; margin-top: 12px;
+    transition: border-color 0.3s;
+  }
+  .input-area:focus-within { border-color: var(--yellow); background: var(--white); }
+  .input-area input {
+    flex: 1; border: none; background: transparent;
+    font-size: 14px; padding: 8px 14px; outline: none;
+    font-family: inherit; color: var(--black);
+  }
+  .input-area input::placeholder { color: #bbb; }
+  .input-area button {
+    width: 42px; height: 42px; border-radius: 50%;
+    border: none; background: var(--yellow); font-size: 18px;
+    cursor: pointer; flex-shrink: 0; font-weight: 700; color: var(--black);
+    transition: all 0.2s;
+  }
+  .input-area button:hover { transform: scale(1.05); box-shadow: 0 4px 16px rgba(253,198,20,0.4); }
+  .input-area button:disabled { opacity: 0.4; cursor: default; transform: none; box-shadow: none; }
+
+  .suggestions {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    justify-content: center; margin-top: 8px;
+  }
+  .suggestions button {
+    padding: 6px 14px; border-radius: 18px;
+    border: 1.5px solid #e0e0e0; background: var(--white);
+    font-size: 12px; cursor: pointer; font-family: inherit;
+    color: var(--gray); transition: all 0.2s;
+  }
+  .suggestions button:hover {
+    border-color: var(--yellow); background: var(--yellow-pale); color: var(--black);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 800px) {
+    .app-layout { flex-direction: column; }
+    .left-panel { width: 100%; min-width: 0; max-height: 45vh; }
+    .right-panel { width: 100%; flex: 1; }
+    .map-wrapper { height: 240px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar"><span>YOUCAT · YOUTH CATECHISM</span><button class="lang-switch" id="langSwitch" title="Switch Language">EN / 中</button></div>
+
+<div class="app-layout">
+
+  <!-- ═══ 左侧面板 40% ═══ -->
+    <aside class="left-panel">
+
+    <!-- 第一：全局搜索 -->
+    <div class="panel-section">
+      <div class="section-title">🔍 知识库搜索</div>
+      <div class="search-wrap">
+        <input type="text" id="searchInput" placeholder="搜索概念、教理、伦理...">
+        <button id="searchBtn">→</button>
+      </div>
+      <div class="search-results" id="searchResults"></div>
+    </div>
+
+    <!-- 第二：圣地图览 -->
+    <div class="panel-section map-section">
+      <div class="section-title">🗺️ 圣地图览</div>
+      <div class="map-wrapper" style="height: 420px; width: 100%;"><div id="map"></div></div>
+      <div class="map-hint">聊天中提及的地点将自动标记在地图上</div>
+    </div>
+
+    <!-- 第三：教会礼仪月历 -->
+    <div class="panel-section" style="flex:1; display:flex; flex-direction:column; min-height:340px;">
+      <div class="section-title">📅 教会礼仪月历</div>
+      <div id="calendarBox" style="flex:1; display:flex; flex-direction:column;">
+        <div class="cal-nav">
+          <button id="calPrev" title="上个月">←</button>
+          <span class="cal-month-label" id="calMonthLabel"></span>
+          <button id="calNext" title="下个月">→</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="cal-day-detail" id="calDetail"></div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ═══ 右侧面板 60% ═══ -->
+  <main class="right-panel">
+
+    <!-- 日签箴言 -->
+    <div class="quote-card" id="quoteCard">
+      <div class="quote-label">✦ 今日箴言 Daily Wisdom</div>
+      <div class="quote-text" id="quoteText">加载中...</div>
+      <div class="quote-source" id="quoteSource"></div>
+    </div>
+
+    <!-- 对话区 -->
+    <div class="chat-container">
+      <div class="messages" id="messages">
+        <div class="msg bot">
+          <div class="avatar" data-role="bot"></div>
+          <div class="bubble">
+            孩子，欢迎你。我是<b>卡米克斯 (Catamicus)</b>。<br>
+            左侧可以搜索教理、查看教会月历。<br>
+            地图会标记我们聊到的圣地哦。
+          </div>
+        </div>
+      </div>
+
+      <div class="msg bot typing" id="typing">
+        <div class="avatar" data-role="bot"></div>
+        <div class="bubble dots"><span></span><span></span><span></span></div>
+      </div>
+
+      <div class="input-area">
+        <input type="text" id="questionInput" placeholder="输入你的问题..."
+               autocomplete="off" autofocus>
+        <button id="sendBtn" title="发送">➤</button>
+      </div>
+
+      <div class="suggestions">
+        <button data-q="天主真的存在吗？">天主真的存在吗？</button>
+        <button data-q="祈祷的时候应该说什么？">祈祷的时候应该说什么？</button>
+        <button data-q="如何面对生活中的痛苦？">如何面对生活中的痛苦？</button>
+        <button data-q="天主教怎么看婚前同居？">天主教怎么看婚前同居？</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// 内联 SVG 头像
+// ═══════════════════════════════════════════════════════
+const GUIDER_SVG = `<svg viewBox="0 0 166 166" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M28.1035 3.71533C15.9095 3.71533 3.71538 15.9094 3.71538 28.1034L3.7163 137.85C3.7163 150.044 15.9104 162.238 28.1045 162.238H82.9778H137.851C150.045 162.238 162.239 150.044 162.239 137.85L162.238 28.1034C162.238 15.9094 150.044 3.71533 137.85 3.71533H82.9769H28.1035ZM30.9617 45.8232V65.6387H73.0696V147.378H82.9777H92.8851V65.6387H132.897L132.896 45.8232H92.8851V18.5769H82.9769H73.0696V45.8232H30.9617Z" fill="#FDC614"/><path d="M30.9617 45.8232V65.6387H73.0696V147.378H82.9777H92.8851V65.6387H132.897L132.896 45.8232H92.8851V18.5769H82.9769H73.0696V45.8232H30.9617Z" fill="black"/><path fill-rule="evenodd" clip-rule="evenodd" d="M28.1035 3.71533C15.9095 3.71533 3.71538 15.9094 3.71538 28.1034L3.7163 137.85C3.7163 150.044 15.9104 162.238 28.1045 162.238H82.9778H137.851C150.045 162.238 162.239 150.044 162.239 137.85L162.238 28.1034C162.238 15.9094 150.044 3.71533 137.85 3.71533H82.9769H28.1035ZM30.9617 45.8232V65.6387H73.0696V147.378H82.9777H92.8851V65.6387H132.897L132.896 45.8232H92.8851V18.5769H82.9769H73.0696V45.8232H30.9617Z" stroke="#FDC614" stroke-width="7.43081"/><path d="M30.9617 45.8232V65.6387H73.0696V147.378H82.9777H92.8851V65.6387H132.897L132.896 45.8232H92.8851V18.5769H82.9769H73.0696V45.8232H30.9617Z" stroke="#FDC614" stroke-width="7.43081"/></svg>`;
+
+const USER_SVG = `<svg viewBox="0 0 166 166" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M85.6721 21.1309C89.3422 21.0798 96.364 20.9864 99.6833 21.1299C100.735 21.1562 104.067 21.3382 104.693 21.4426C108.001 22.0637 110.64 22.4029 113.38 23.1442C115.677 23.7653 118.857 23.9958 120.742 25.1108C124.453 27.3067 123.391 26.2672 124.453 27.3067C125.664 28.4932 127.071 29.2589 128.07 30.8308C128.922 32.1712 130.011 34.0486 131.037 36.3023C132.637 39.8192 133.751 43.0461 135.058 46.2273C136.455 49.6266 137.633 53.4965 137.761 56.7463C137.838 58.6854 137.838 62.0035 137.312 66.6079C136.786 71.2123 135.765 76.9297 134.702 81.1822C133.64 85.4347 132.568 88.1402 131.9 89.9664C131.233 91.7925 130.977 92.7114 129.798 94.9064C128.618 97.1015 126.576 100.471 124.924 102.865C123.272 105.26 122.047 106.638 119.936 108.537C117.824 110.436 115.031 112.98 112.723 114.221C109.112 116.164 105.827 117.519 103.281 118.621L103.261 118.63C101.483 119.401 97.9372 120.938 93.8112 121.84C91.9425 122.248 90.4869 122.508 86.69 122.688C83.9713 122.817 79.7326 123.006 77.4054 122.918C74.6681 122.814 73.8303 122.703 71.3592 122.189C65.6635 121.003 61.4453 120.272 60.4604 120.055C58.936 119.721 55.9728 119.409 53.5759 118.663C50.9786 117.855 47.9628 116.531 46.6171 115.826C45.4809 115.231 44.1739 114.346 43.3941 113.218C42.1829 111.466 41.3604 110.644 40.663 109.585C39.8625 108.369 38.889 106.952 38.1856 105.323C36.8738 102.287 36.0561 100.428 35.2991 98.3375C34.2441 95.4247 33.9425 93.4307 33.3678 90.9664C32.9044 88.9802 32.2971 87.2908 32.1055 85.5298C31.9763 84.3425 30.989 81.9869 30.9716 78.0706C30.946 72.3493 30.9602 68.3484 31.1278 67.6629C31.4627 66.2931 31.6974 64.0892 32.237 62.0925C32.6477 60.5726 32.7648 57.8106 33.5031 55.5103C34.6586 51.9099 34.7353 50.5626 35.5126 49.2283C36.4159 47.6775 36.6722 45.9615 38.2978 43.787C39.3582 42.3685 40.3783 41.1303 41.1325 40.3614C42.1983 39.2747 44.696 37.2476 46.6573 35.6905C49.1533 33.7089 50.3388 33.2628 52.1187 32.0591C53.6455 31.0265 55.6248 29.6108 59.086 28.2421C61.9494 27.1097 64.1301 26.4514 68.9082 24.5558C71.1813 23.6539 74.204 23.0076 76.048 22.4953C78.5478 21.8007 80.079 21.2087 85.6721 21.1309Z" fill="white"/><path d="M45.8232 162.238L127.562 162.239C127.071 160.674 127.33 156.512 127.205 156.062C126.594 154.547 126.101 151.601 125.774 149.315C125.2 147.678 124.207 146.181 123.525 143.957C122.909 141.952 122.093 140.159 121.193 137.781C120.043 134.744 119.139 131.476 118.126 129.73C117.104 127.968 116.098 126.025 115.06 124.087C114.161 122.409 112.505 121.088 110.224 120.131C109.466 119.814 103.698 118.529 103.281 118.621L103.261 118.63C101.483 119.401 97.9372 120.938 93.8112 121.84C91.9425 122.248 90.4869 122.508 86.69 122.688C83.9713 122.817 79.7326 123.006 77.4054 122.918C74.6681 122.814 73.8303 122.703 71.3592 122.189C69.6259 121.832 66.1695 123.803 64.1247 125.152C62.2678 126.378 60.4436 128.783 59.4586 130.467C58.6026 131.931 57.745 134.828 56.7195 137.171C55.7948 139.283 54.963 140.971 54.021 142.732C52.9926 144.655 52.181 146.697 51.3224 148.782C50.5136 150.746 49.9731 152.585 48.9108 154.791C48.5011 156.176 48.0914 157.251 47.6425 157.944C47.4364 158.313 45.9901 161.576 45.8232 162.238Z" fill="white"/><path d="M137.851 3.71533H28.1044C15.9103 3.71533 3.71626 15.9094 3.71626 28.1034L3.71533 137.85C3.71533 150.044 15.9094 162.238 28.1035 162.238H45.8232C45.9901 161.576 47.4364 158.313 47.6425 157.944C48.0914 157.251 48.5011 156.176 48.9108 154.791C49.9731 152.585 50.5136 150.746 51.3224 148.782C52.181 146.697 52.9926 144.655 54.021 142.732C54.963 140.971 55.7948 139.283 56.7195 137.171C57.745 134.828 58.6026 131.931 59.4586 130.467C60.4436 128.783 62.2678 126.378 64.1247 125.152C66.1695 123.803 69.6259 121.832 71.3592 122.189C65.6635 121.003 61.4453 120.272 60.4604 120.055C58.936 119.721 55.9728 119.409 53.5759 118.663C50.9786 117.855 47.9628 116.531 46.6171 115.826C45.4809 115.231 44.1739 114.346 43.3941 113.218C42.1829 111.466 41.3604 110.644 40.663 109.585C39.8625 108.369 38.889 106.952 38.1856 105.323C36.8738 102.287 36.0561 100.428 35.2991 98.3375C34.2441 95.4247 33.9425 93.4307 33.3678 90.9664C32.9044 88.9802 32.2971 87.2908 32.1055 85.5298C31.9763 84.3425 30.989 81.9869 30.9716 78.0706C30.946 72.3493 30.9602 68.3484 31.1278 67.6629C31.4627 66.2931 31.6974 64.0892 32.237 62.0925C32.6477 60.5726 32.7648 57.8106 33.5031 55.5103C34.6586 51.9099 34.7353 50.5626 35.5126 49.2283C36.4159 47.6775 36.6722 45.9615 38.2978 43.787C39.3582 42.3685 40.3783 41.1303 41.1325 40.3614C42.1983 39.2747 44.696 37.2476 46.6573 35.6905C49.1533 33.7089 50.3388 33.2628 52.1187 32.0591C53.6455 31.0265 55.6248 29.6108 59.086 28.2421C61.9494 27.1097 64.1301 26.4514 68.9082 24.5558C71.1813 23.6539 74.204 23.0076 76.048 22.4953C78.5478 21.8007 80.079 21.2087 85.6721 21.1309C89.3422 21.0798 96.364 20.9864 99.6833 21.1299C100.735 21.1562 104.067 21.3382 104.693 21.4426C108.001 22.0637 110.64 22.4029 113.38 23.1442C115.677 23.7653 118.857 23.9958 120.742 25.1108C124.453 27.3067 123.391 26.2672 124.453 27.3067C125.664 28.4932 127.071 29.2589 128.07 30.8308C128.922 32.1712 130.011 34.0486 131.037 36.3023C132.637 39.8192 133.751 43.0461 135.058 46.2273C136.455 49.6266 137.633 53.4965 137.761 56.7463C137.838 58.6854 137.838 62.0035 137.312 66.6079C136.786 71.2123 135.765 76.9297 134.702 81.1822C133.64 85.4347 132.568 88.1402 131.9 89.9664C131.233 91.7925 130.977 92.7114 129.798 94.9064C128.618 97.1015 126.576 100.471 124.924 102.865C123.272 105.26 122.047 106.638 119.936 108.537C117.824 110.436 115.031 112.98 112.723 114.221C109.112 116.164 105.827 117.519 103.281 118.621C103.698 118.529 109.466 119.814 110.224 120.131C112.505 121.088 114.161 122.409 115.06 124.087C116.098 126.025 117.104 127.968 118.126 129.73C119.139 131.476 120.043 134.744 121.193 137.781C122.093 140.159 122.909 141.952 123.525 143.957C124.207 146.181 125.2 147.678 125.774 149.315C126.101 151.601 126.594 154.547 127.205 156.062C127.33 156.512 127.071 160.674 127.562 162.239L137.85 162.238C150.044 162.238 162.238 150.044 162.238 137.85L162.239 28.1034C162.239 15.9094 150.045 3.71533 137.851 3.71533Z" fill="white"/><path d="M28.1035 162.238C15.9094 162.238 3.71533 150.044 3.71533 137.85L3.71626 28.1034C3.71626 15.9094 15.9103 3.71533 28.1044 3.71533H137.851C150.045 3.71533 162.239 15.9094 162.239 28.1034L162.238 137.85C162.238 150.044 150.044 162.238 137.85 162.238M28.1035 162.238H137.85M28.1035 162.238H45.8232M45.8232 162.238L127.562 162.239L137.85 162.238M103.281 118.621L103.261 118.63C101.483 119.401 97.9372 120.938 93.8112 121.84C91.9425 122.248 90.4869 122.508 86.69 122.688C83.9713 122.817 79.7326 123.006 77.4054 122.918C74.6681 122.814 73.8303 122.703 71.3592 122.189C65.6635 121.003 61.4453 120.272 60.4604 120.055C58.936 119.721 55.9728 119.409 53.5759 118.663C50.9786 117.855 47.9628 116.531 46.6171 115.826C45.4809 115.231 44.1739 114.346 43.3941 113.218C42.1829 111.466 41.3604 110.644 40.663 109.585C39.8625 108.369 38.889 106.952 38.1856 105.323C36.8738 102.287 36.0561 100.428 35.2991 98.3375C34.2441 95.4247 33.9425 93.4307 33.3678 90.9664C32.9044 88.9802 32.2971 87.2908 32.1055 85.5298C31.9763 84.3425 30.989 81.9869 30.9716 78.0706C30.946 72.3493 30.9602 68.3484 31.1278 67.6629C31.4627 66.2931 31.6974 64.0892 32.237 62.0925C32.6477 60.5726 32.7648 57.8106 33.5031 55.5103C34.6586 51.9099 34.7353 50.5626 35.5126 49.2283C36.4159 47.6775 36.6722 45.9615 38.2978 43.787C39.3582 42.3685 40.3783 41.1303 41.1325 40.3614C42.1983 39.2747 44.696 37.2476 46.6573 35.6905C49.1533 33.7089 50.3388 33.2628 52.1187 32.0591C53.6455 31.0265 55.6248 29.6108 59.086 28.2421C61.9494 27.1097 64.1301 26.4514 68.9082 24.5558C71.1813 23.6539 74.204 23.0076 76.048 22.4953C78.5478 21.8007 80.079 21.2087 85.6721 21.1309C89.3422 21.0798 96.364 20.9864 99.6833 21.1299C100.735 21.1562 104.067 21.3382 104.693 21.4426C108.001 22.0637 110.64 22.4029 113.38 23.1442C115.677 23.7653 118.857 23.9958 120.742 25.1108C124.453 27.3067 123.391 26.2672 124.453 27.3067C125.664 28.4932 127.071 29.2589 128.07 30.8308C128.922 32.1712 130.011 34.0486 131.037 36.3023C132.637 39.8192 133.751 43.0461 135.058 46.2273C136.455 49.6266 137.633 53.4965 137.761 56.7463C137.838 58.6854 137.838 62.0035 137.312 66.6079C136.786 71.2123 135.765 76.9297 134.702 81.1822C133.64 85.4347 132.568 88.1402 131.9 89.9664C131.233 91.7925 130.977 92.7114 129.798 94.9064C128.618 97.1015 126.576 100.471 124.924 102.865C123.272 105.26 122.047 106.638 119.936 108.537C117.824 110.436 115.031 112.98 112.723 114.221C109.112 116.164 105.827 117.519 103.281 118.621ZM71.3592 122.189C69.6259 121.832 66.1695 123.803 64.1247 125.152C62.2678 126.378 60.4436 128.783 59.4586 130.467C58.6026 131.931 57.745 134.828 56.7195 137.171C55.7948 139.283 54.963 140.971 54.021 142.732C52.9926 144.655 52.181 146.697 51.3224 148.782C50.5136 150.746 49.9731 152.585 48.9108 154.791C48.5011 156.176 48.0914 157.251 47.6425 157.944C47.4364 158.313 45.9901 161.576 45.8232 162.238M127.562 162.239C127.071 160.674 127.33 156.512 127.205 156.062C126.594 154.547 126.101 151.601 125.774 149.315C125.2 147.678 124.207 146.181 123.525 143.957C122.909 141.952 122.093 140.159 121.193 137.781C120.043 134.744 119.139 131.476 118.126 129.73C117.104 127.968 116.098 126.025 115.06 124.087C114.161 122.409 112.505 121.088 110.224 120.131C109.466 119.814 103.698 118.529 103.281 118.621" stroke="black" stroke-width="7.43081"/></svg>`;
+
+// ═══════════════════════════════════════════════════════
+// 地理位置坐标映射
+// ═══════════════════════════════════════════════════════
+const LOCATION_COORDS = {
+  "Rome": [41.9028, 12.4964],
+  "Jerusalem": [31.7683, 35.2137],
+  "Bethlehem": [31.7054, 35.2024],
+  "Nazareth": [32.6996, 35.3035],
+  "Vatican": [41.9029, 12.4534],
+  "Galilee": [32.7607, 35.5287],
+  "Mount Sinai": [28.5396, 33.9748],
+  "Sinai": [28.5396, 33.9748],
+  "Assisi": [43.0707, 12.6196],
+  "Lourdes": [43.0943, -0.0467],
+  "Fatima": [39.6175, -8.6522],
+  "Santiago de Compostela": [42.8806, -8.5457],
+  "Canterbury": [51.2787, 1.0806],
+  "Avila": [40.6567, -4.6997],
+  "Lisieux": [49.1467, 0.2298],
+  "Loyola": [43.1553, -2.2841],
+  "Ars": [45.9933, 4.8319],
+  "Antioch": [36.2021, 36.1613],
+  "Ephesus": [37.9396, 27.3408],
+  "Corinth": [37.9386, 22.9323],
+  "Thessalonica": [40.6401, 22.9444],
+  "Philippi": [41.0121, 24.2854],
+  "Colossae": [37.7868, 29.2621],
+  "Damascus": [33.5138, 36.2765],
+  "Athens": [37.9838, 23.7275],
+  "Istanbul": [41.0082, 28.9784],
+  "Constantinople": [41.0082, 28.9784],
+  "Nicaea": [40.4293, 29.7205],
+  "Trent": [46.0697, 11.1213],
+  "Chalcedon": [40.9844, 29.0369],
+  "Milan": [45.4642, 9.1900],
+  "Carthage": [36.8536, 10.3253],
+  "Alexandria": [31.2001, 29.9187],
+  "Wittenberg": [51.8661, 12.6434],
+  "Augsburg": [48.3705, 10.8978],
+  "Worms": [49.6334, 8.3594],
+};
+
+function geocode(name) {
+  if (LOCATION_COORDS[name]) return LOCATION_COORDS[name];
+  const lower = name.toLowerCase();
+  for (const [k, v] of Object.entries(LOCATION_COORDS)) {
+    if (k.toLowerCase() === lower) return v;
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════
+// 填充静态头像
+// ═══════════════════════════════════════════════════════
+document.querySelectorAll('.avatar[data-role]').forEach(el => {
+  el.innerHTML = el.dataset.role === 'user' ? USER_SVG : GUIDER_SVG;
+});
+
+// ═══════════════════════════════════════════════════════
+// 双语支持
+// ═══════════════════════════════════════════════════════
+const LANG = (function() {
+  const stored = localStorage.getItem('youcat_lang');
+  if (stored === 'en' || stored === 'zh') return stored;
+  return 'en';
+})();
+
+function __(zh, en) {
+  return LANG === 'en' ? en : zh;
+}
+
+function applyTranslations() {
+  var btn = document.getElementById('langSwitch');
+  if (btn) btn.textContent = LANG === 'zh' ? 'EN / 中' : '中 / EN';
+
+  if (LANG !== 'en') return;
+
+  document.getElementById('searchInput').placeholder = 'Search concepts, catechism, ethics...';
+
+  var titles = document.querySelectorAll('.section-title');
+  if (titles[0]) titles[0].innerHTML = '🔍 Knowledge Base Search';
+  if (titles[1]) titles[1].innerHTML = '🗺️ Holy Land Map';
+  if (titles[2]) titles[2].innerHTML = '📅 Liturgical Calendar';
+
+  var mapHint = document.querySelector('.map-hint');
+  if (mapHint) mapHint.textContent = 'Locations mentioned in chat will be marked on the map';
+
+  var quoteLabel = document.querySelector('.quote-label');
+  if (quoteLabel) quoteLabel.textContent = '✦ DAILY WISDOM';
+
+  document.getElementById('questionInput').placeholder = 'Type your question...';
+
+  var enSuggestions = [
+    'Does God really exist?',
+    'What should I say when I pray?',
+    'How to face suffering in life?',
+    'What does the Church say about cohabitation?'
+  ];
+  document.querySelectorAll('.suggestions button').forEach(function(btn, i) {
+    if (enSuggestions[i]) btn.textContent = enSuggestions[i];
+  });
+
+  var firstBotBubble = document.querySelector('.msg.bot .bubble');
+  if (firstBotBubble) {
+    firstBotBubble.innerHTML = 'Welcome, my child. I am <b>Catamicus</b>.<br>Search the catechism and view the liturgical calendar on the left.<br>The map will mark holy places we discuss.';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// 日签
+// ═══════════════════════════════════════════════════════
+async function loadQuote() {
+  try {
+    const resp = await fetch('/api/quote?lang=' + LANG);
+    const data = await resp.json();
+    if (LANG === 'en') {
+      document.getElementById('quoteText').textContent = '”' + data.text + '”';
+      var parts = [];
+      if (data.reference_id) parts.push(data.reference_id);
+      if (data.concept) parts.push(data.concept);
+      document.getElementById('quoteSource').textContent = '— ' + (parts.length ? parts.join(' · ') : data.category);
+    } else {
+      document.getElementById('quoteText').textContent = '「' + data.text + '」';
+      document.getElementById('quoteSource').textContent =
+        '—— ' + data.category + (data.concept ? ' · ' + data.concept : '');
+    }
+  } catch(e) {
+    document.getElementById('quoteText').textContent = LANG === 'en'
+      ? '”God is love, and he who abides in love abides in God.”'
+      : '「天主是爱，那存留在爱内的，就存留在天主内。」';
+  }
+}
+loadQuote();
+applyTranslations();
+
+// ═══════════════════════════════════════════════════════
+// 聊天逻辑
+// ═══════════════════════════════════════════════════════
+const messagesEl = document.getElementById('messages');
+const inputEl    = document.getElementById('questionInput');
+const sendBtn    = document.getElementById('sendBtn');
+const typingEl   = document.getElementById('typing');
+
+function addMessage(role, text) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  const svg = role === 'user' ? USER_SVG : GUIDER_SVG;
+  div.innerHTML =
+    '<div class="avatar" data-role="' + role + '">' + svg + '</div>' +
+    '<div class="bubble">' + text + '</div>';
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return div;
+}
+
+async function sendQuestion(question) {
+  if (!question.trim()) return;
+  addMessage('user', question);
+  inputEl.value = '';
+  sendBtn.disabled = true;
+  typingEl.classList.add('active');
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  try {
+    const resp = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, lang: LANG })
+    });
+    const data = await resp.json();
+    typingEl.classList.remove('active');
+    addMessage('bot', data.answer);
+    // 地图联动：标记 location_tags
+    if (data.locations && data.locations.length > 0) {
+      markLocations(data.locations);
+    }
+  } catch(e) {
+    typingEl.classList.remove('active');
+    addMessage('bot', '孩子，抱歉……我好像打了个盹。请再试一次好吗？');
+  }
+  sendBtn.disabled = false;
+  inputEl.focus();
+}
+
+sendBtn.addEventListener('click', () => sendQuestion(inputEl.value));
+inputEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendQuestion(inputEl.value);
+});
+document.querySelectorAll('.suggestions button').forEach(btn => {
+  btn.addEventListener('click', () => sendQuestion(btn.dataset.q));
+});
+
+// ═══════════════════════════════════════════════════════
+// 全局搜索
+// ═══════════════════════════════════════════════════════
+const searchInput = document.getElementById('searchInput');
+const searchBtn   = document.getElementById('searchBtn');
+const searchResults = document.getElementById('searchResults');
+
+async function doSearch() {
+  const q = searchInput.value.trim();
+  if (!q) { searchResults.innerHTML = ''; return; }
+  try {
+    const resp = await fetch('/api/search?q=' + encodeURIComponent(q));
+    const data = await resp.json();
+    if (!data.results || data.results.length === 0) {
+      searchResults.innerHTML = '<div style="padding:12px;color:var(--gray-light);font-size:13px;">' + __('未找到相关结果', 'No results found') + '</div>';
+      return;
+    }
+    searchResults.innerHTML = data.results.map(r =>
+      '<div class="search-card">' +
+        '<div class="sc-concept">' + escHtml(r.concept) + '</div>' +
+        '<div class="sc-def">' + escHtml(r.theological_definition || r.ethical_application || '') + '</div>' +
+        '<span class="sc-cat">' + escHtml(r.topic_category) + '</span>' +
+      '</div>'
+    ).join('');
+  } catch(e) {
+    searchResults.innerHTML = '<div style="padding:12px;color:#d44;font-size:13px;">' + __('搜索失败', 'Search failed') + '</div>';
+  }
+}
+
+searchBtn.addEventListener('click', doSearch);
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+});
+// 实时搜索（300ms 防抖）
+let searchTimer;
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(doSearch, 300);
+});
+
+function escHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// 语言切换
+document.getElementById('langSwitch').addEventListener('click', function() {
+  var current = localStorage.getItem('youcat_lang') || 'zh';
+  var next = current === 'zh' ? 'en' : 'zh';
+  localStorage.setItem('youcat_lang', next);
+  window.location.reload();
+});
+
+// ═══════════════════════════════════════════════════════
+// 礼仪月历 (Calapi monthly)
+// ═══════════════════════════════════════════════════════
+const LITURGICAL_COLORS = {
+  'white': '#e8e8e8', 'green': '#4a9', 'red': '#d44',
+  'violet': '#96b', 'purple': '#96b', 'rose': '#f9c',
+  'black': '#333', 'gold': '#da0',
+};
+
+const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
+
+let calYear, calMonth;
+const now = new Date();
+calYear = now.getFullYear();
+calMonth = now.getMonth() + 1;
+
+let calCache = {}; // { "2026-05-01": { celebrations: [...], season: "...", ... } }
+
+async function fetchMonth(year, month) {
+  const key = year + '-' + String(month).padStart(2,'0');
+  if (calCache[key]) return calCache[key];
+  try {
+    const url = '/api/calendar/' + year + '/' + month;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    console.log('Local calendar data:', data);
+    calCache[key] = data;
+    return data;
+  } catch(e) {
+    console.warn('Calendar fetch failed:', e);
+    return null;
+  }
+}
+
+function renderCalendar(data) {
+  const grid = document.getElementById('calGrid');
+  const label = document.getElementById('calMonthLabel');
+  const detail = document.getElementById('calDetail');
+
+  var MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  label.textContent = LANG === 'en'
+    ? MONTHS_EN[calMonth - 1] + ' ' + calYear
+    : calYear + ' 年 ' + String(calMonth).padStart(2,'0') + ' 月';
+  detail.classList.remove('open');
+  detail.innerHTML = '';
+
+  // 表头
+  let html = '';
+  var WD = LANG === 'en' ? ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] : WEEKDAYS;
+  WD.forEach(d => { html += '<div class="cal-day-header">' + d + '</div>'; });
+
+  // 当月第一天是周几 (0=sunday)
+  const firstDay = new Date(calYear, calMonth - 1, 1).getDay();
+  // 当月天数
+  const daysInMonth = new Date(calYear, calMonth, 0).getDate();
+
+  // 填充前置空白
+  for (let i = 0; i < firstDay; i++) {
+    html += '<div class="cal-day empty"></div>';
+  }
+
+  const todayStr = now.getFullYear() + '-' +
+    String(now.getMonth()+1).padStart(2,'0') + '-' +
+    String(now.getDate()).padStart(2,'0');
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = calYear + '-' + String(calMonth).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    const dayKey = String(d);
+    const dayCelebrations = (data && data.days && data.days[dayKey]) || [];
+    const isToday = (dateStr === todayStr);
+
+    let dotHtml = '';
+    let titleAttr = '';
+    if (dayCelebrations.length > 0) {
+      const c = dayCelebrations[0];
+      const dotColor = c.color || '#ccc';
+      dotHtml = '<div class="dot" style="background:' + dotColor + ';"></div>';
+      titleAttr = ' title="' + escAttr(c.name) + '"';
+    }
+
+    html += '<div class="cal-day' + (isToday ? ' today' : '') + '" data-date="' + dateStr + '"' + titleAttr + '>' +
+      '<span>' + d + '</span>' + dotHtml + '</div>';
+  }
+
+  grid.innerHTML = html;
+
+  // 点击日期显示详情
+  grid.querySelectorAll('.cal-day[data-date]').forEach(el => {
+    el.addEventListener('click', () => showDayDetail(el.dataset.date, data));
+  });
+}
+
+function showDayDetail(dateStr, data) {
+  const detail = document.getElementById('calDetail');
+  const dayKey = String(parseInt(dateStr.split('-')[2])); // extract day number
+  const dayCelebrations = (data && data.days && data.days[dayKey]) || [];
+
+  if (dayCelebrations.length === 0) {
+    detail.innerHTML = '<div style="color:var(--gray-light);">' + dateStr + ' · ' + __('平日', 'Weekday') + '</div>';
+    detail.classList.add('open');
+    return;
+  }
+
+  let itemsHtml = dayCelebrations.map(c => {
+    return '<div style="margin-top:6px;">' +
+      '<span class="dd-color" style="background:' + (c.color || '#ccc') + ';"></span>' +
+      '<span class="dd-title">' + escHtml(c.name) + '</span>' +
+      (c.grade ? ' <span style="color:var(--gray-light);font-size:11px;">(' + escHtml(c.grade) + ')</span>' : '') +
+      '</div>';
+  }).join('');
+
+  const season = dayCelebrations[0].season || '';
+  detail.innerHTML = '<div style="font-size:11px;color:var(--gray-light);margin-bottom:4px;">' +
+    dateStr + (season ? ' · ' + season : '') + '</div>' + itemsHtml;
+  detail.classList.add('open');
+}
+
+async function loadMonth() {
+  const data = await fetchMonth(calYear, calMonth);
+  renderCalendar(data);
+}
+
+document.getElementById('calPrev').addEventListener('click', () => {
+  if (calMonth === 1) { calMonth = 12; calYear--; }
+  else { calMonth--; }
+  loadMonth();
+});
+document.getElementById('calNext').addEventListener('click', () => {
+  if (calMonth === 12) { calMonth = 1; calYear++; }
+  else { calMonth++; }
+  loadMonth();
+});
+
+loadMonth();
+
+// ═══════════════════════════════════════════════════════
+// Leaflet 地图 (本地瓦片优先 → OSM 回退)
+// ═══════════════════════════════════════════════════════
+const map = L.map('map', {
+  center: [31.7683, 35.2137],  // Jerusalem as default
+  zoom: 4,
+  zoomControl: true,
+  attributionControl: false
+});
+
+// 本地瓦片图层
+const localTiles = L.tileLayer('/static/tiles/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  errorTileUrl: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+});
+
+// OSM 回退层（当本地瓦片全部失败时透明降级）
+const osmTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; OpenStreetMap contributors'
+});
+
+// 先加载本地瓦片，监听 tileerror 决定是否切换到 OSM
+let localFailed = false;
+localTiles.on('tileerror', function(e) {
+  if (!localFailed) {
+    localFailed = true;
+    map.removeLayer(localTiles);
+    osmTiles.addTo(map);
+  }
+});
+localTiles.addTo(map);
+
+// 强制刷新地图尺寸
+map.invalidateSize();
+window.addEventListener('resize', () => { map.invalidateSize(); });
+
+// 标记数组
+const markers = [];
+
+function markLocations(locationNames) {
+  // 清除旧标记
+  markers.forEach(m => map.removeLayer(m));
+  markers.length = 0;
+
+  const bounds = [];
+  locationNames.forEach(name => {
+    const coords = geocode(name);
+    if (coords) {
+      const marker = L.marker(coords)
+        .addTo(map)
+        .bindPopup('<b>' + escHtml(name) + '</b>');
+      markers.push(marker);
+      bounds.push(coords);
+    }
+  });
+
+  if (bounds.length > 0) {
+    if (bounds.length === 1) {
+      map.setView(bounds[0], 12);
+    } else {
+      map.fitBounds(bounds, { padding: [30, 30], maxZoom: 12 });
+    }
+  }
+}
+</script>
+</body>
+</html>

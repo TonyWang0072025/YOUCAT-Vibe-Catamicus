@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+  youcat-vibe:
+    build: .
+    container_name: youcat-vibe
+    ports:
+      - "8000:8000"
+    environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+    restart: unless-stopped
