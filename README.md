@@ -33,8 +33,8 @@ YOUCAT Vibe is a **Vibe Coding experiment** that brings the *Youth Catechism of 
 
 ```bash
 # Clone
-git clone https://github.com/YOUR_USERNAME/youcat-vibe.git
-cd youcat-vibe
+git clone https://github.com/TonyWang0072025/youcat-vibe.git
+cd YOUCAT-Vibe-Catamicus
 
 # Create virtual environment
 python -m venv venv
