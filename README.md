@@ -50,7 +50,7 @@ export DEEPSEEK_API_KEY="sk-your-key-here"   # Windows: set DEEPSEEK_API_KEY=sk-
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Then open **http://localhost:8000**.
+Then open **http://localhost:8000.
 
 #### Option 2: Docker (recommended)
 
@@ -66,7 +66,7 @@ echo "DEEPSEEK_API_KEY=sk-your-key-here" > .env
 docker-compose up -d
 ```
 
-Then open **http://localhost:8000**.
+Then open **http://localhost:8000.
 
 ### Project Structure
 
@@ -137,7 +137,7 @@ export DEEPSEEK_API_KEY="sk-your-key-here"   # Windows: set DEEPSEEK_API_KEY=sk-
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-浏览器打开 **http://localhost:8000**。
+浏览器打开 **http://localhost:8000。
 
 #### 方式二：Docker（推荐）
 
@@ -150,7 +150,7 @@ echo "DEEPSEEK_API_KEY=sk-your-key-here" > .env
 docker-compose up -d
 ```
 
-浏览器打开 **http://localhost:8000**。
+浏览器打开 **http://localhost:8000。
 
 ### 项目结构
 
